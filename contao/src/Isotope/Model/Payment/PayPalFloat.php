@@ -36,7 +36,6 @@ class PayPalFloat extends PayPal
         }
         return $arrOptions;
     }
- 
 
     /**
      * Return the PayPal form.
@@ -66,17 +65,20 @@ class PayPalFloat extends PayPal
 
             $strConfig = '';
             $arrConfig = $objItem->getConfiguration();
-
+            
+            $arrBlacklist = deserialize($this->uos_paypalfloat_blacklist);
+            
             if (!empty($arrConfig)) {
-
-                array_walk(
-                    $arrConfig,
-                    function(&$option) {
-                        $option = $option['label'] . ': ' . (string) $option;
-                    }
-                );
-
-                $strConfig = ' (' . implode(', ', $arrConfig) . ')';
+                $arrConfigProcessed = array();
+				foreach($arrConfig as $attr_code => $objHasteData) {
+					if(in_array($attr_code,$arrBlacklist)) {
+						continue;
+					}
+                    $arrConfigProcessed[] = $objHasteData['label'] . ': ' . (string) $objHasteData;
+				}
+                if($arrConfigProcessed) {
+                    $strConfig = ' (' . implode(', ',$arrConfigProcessed) . ')';
+                }
             }
 
             $arrData['item_number_' . ++$i] = $objItem->getSku();
@@ -88,9 +90,10 @@ class PayPalFloat extends PayPal
 
             if(floor($objItem->quantity) < $objItem->quantity) {
                 $arrData['quantity_' . $i]      = 1;
-                
-                if(isset($arrConfig[$this->uos_paypalfloat])) {
-                    $strUos = $arrConfig[$this->uos_paypalfloat];
+               
+                if(isset($GLOBALS['TL_DCA']['tl_iso_product']['attributes'][$this->uos_paypalfloat])) {
+                    $objAttribute = $GLOBALS['TL_DCA']['tl_iso_product']['attributes'][$this->uos_paypalfloat];
+                    $strUos = $objAttribute->generate($objItem->getProduct(), array('nohtml'));
                 } else {
                     $strUos = 'Units';
                 }
