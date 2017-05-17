@@ -21,10 +21,21 @@ use Isotope\Model\ProductCollection\Order;
 use Isotope\Module\Checkout;
 use Isotope\Template;
 use Isotope\Model\Payment\Paypal;
+use Isotope\Model\Attribute;
 
 
 class PayPalFloat extends PayPal
 {
+ 
+    public static function getDcaOptions()
+    {
+        $collection = Attribute::find(array());
+        $arrOptions = array();
+        foreach($collection as $obj) {
+            $arrOptions[$obj->field_name] = $obj->name . ' ('. $obj->field_name .')';
+        }
+        return $arrOptions;
+    }
  
 
     /**
@@ -74,15 +85,20 @@ class PayPalFloat extends PayPal
             );
 
             $arrData['amount_' . $i]        = $objItem->getPrice();
-            $arrData['quantity_' . $i]      = $objItem->quantity;
 
-            if(isset($arrConfig['anzahl']))
-            {
-                $totalUos = $objItem->quantity*$objItem->getPrice();
-                $priceUom = round($totalUos/$objItem->getConfiguration()['anzahl']->value,2);
-
-                $arrData['amount_' . $i]        = $priceUom;
-                $arrData['quantity_' . $i]      = $objItem->getConfiguration()['anzahl']->value;
+            if(floor($objItem->quantity) < $objItem->quantity) {
+                $arrData['quantity_' . $i]      = 1;
+                
+                if(isset($arrConfig[$this->uos_paypalfloat])) {
+                    $strUos = $arrConfig[$this->uos_paypalfloat];
+                } else {
+                    $strUos = 'Units';
+                }
+                
+                $arrData['item_name_' . $i] = $objItem->quantity . ' ' .$strUos . ': '. $arrData['item_name_' . $i];
+                $arrData['amount_' . $i]        = $objItem->getTotalPrice();
+            } else {
+                $arrData['quantity_' . $i]      = (int) $objItem->quantity;                
             }
 
         }
